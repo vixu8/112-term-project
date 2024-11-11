@@ -66,6 +66,26 @@ def drawTesting(app):
 def onMouseMove(app, mouseX, mouseY):
     pass
 
+def onKeyPress(app, key):
+    if app.gameStage == "play":
+        if "s" in key:
+            drawKeyPressed(app, 1)
+        if "d" in key:
+            drawKeyPressed(app, 2)
+        if "f" in key:
+            drawKeyPressed(app, 3)
+        if "j" in key:
+            drawKeyPressed(app, 4)
+        if "k" in key:
+            drawKeyPressed(app, 5)
+        if "l" in key:
+            drawKeyPressed(app, 6)
+
+def drawKeyPressed(app, col):
+    if col == 1:
+        drawPolygon(0*app.cellWidth, 12*app.cellHeight, 1.5*app.cellWidth, 10.5*app.cellHeight,3*app.cellWidth, 10.5*app.cellHeight,3*app.cellWidth, 12*app.cellHeight, fill="cyan")
+
+    
 
 def main():
     print("blehh")
