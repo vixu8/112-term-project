@@ -1,7 +1,11 @@
 from cmu_graphics import *
 from types import SimpleNamespace
+from playsound import playsound
 
 def onAppStart(app):
+    playsound('/yo_phone_linging.mp3')
+
+
     app.width = 1400
     app.height = 600
 
