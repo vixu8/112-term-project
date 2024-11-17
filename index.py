@@ -1,10 +1,9 @@
 from cmu_graphics import *
 from types import SimpleNamespace
-from playsound import playsound
-
+import pygame
 def onAppStart(app):
-    playsound('/yo_phone_linging.mp3')
-
+    pygame.mixer.init()
+    pygame.mixer.music.load("yo_phone_linging.mp3")
 
     app.width = 1400
     app.height = 600
@@ -71,6 +70,10 @@ def onMouseMove(app, mouseX, mouseY):
     pass
 
 def onKeyPress(app, key):
+    if "p" in key:
+        pygame.mixer.music.play()
+
+
     if app.gameStage == "play":
         if "s" in key:
             drawKeyPressed(app, 1)
