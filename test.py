@@ -14,12 +14,15 @@ def onAppStart(app):
 
     app.colWidth = app.width / 6
 
-    app.gameStage = "play" #home, play, pause, scoreboard
+    app.gameStage = "testing" #home, play, pause, scoreboard
 
     app.stepsPerSecond = 100
     app.scrollSpeed = .1
 
     app.colNotes = {1:[Note(1, "tap", 0)], 2:[], 3:[], 4:[], 5:[], 6:[]}
+    
+    app.keysPressed = {1:False, 2:False, 3:False, 4:False, 5:False, 6:False}
+
 
     
 
@@ -31,13 +34,15 @@ def redrawAll(app):
         drawGameScreen(app)
         drawNotes(app)
     if app.gameStage == "testing":
-        drawTesting(app)
+        drawGameScreen(app)
         drawNotes(app)
+        drawPressedKeys(app)
 
 def onStep(app):
     col = 1
     for note in app.colNotes[col]:
         note.move(10)
+    print(app.keysPressed)
 
 def drawHomeScreen(app):
     drawRect(0,0,app.width, app.height, fill="gray")
@@ -92,29 +97,53 @@ def drawTesting(app):
 def onMouseMove(app, mouseX, mouseY):
     pass
 
+
 def onKeyPress(app, key):
+
     if "p" in key:
         pygame.mixer.music.play()
-
-
-    if app.gameStage == "play":
+    if app.gameStage == "testing":
         if "s" in key:
-            drawKeyPressed(app, 1)
+            app.keysPressed[1] = True
         if "d" in key:
-            drawKeyPressed(app, 2)
+            app.keysPressed[2] = True
         if "f" in key:
-            drawKeyPressed(app, 3)
+            app.keysPressed[3] = True
         if "j" in key:
-            drawKeyPressed(app, 4)
+            app.keysPressed[4] = True
         if "k" in key:
-            drawKeyPressed(app, 5)
+            app.keysPressed[5] = True
         if "l" in key:
-            drawKeyPressed(app, 6)
+            app.keysPressed[6] = True
 
-def drawKeyPressed(app, col):
-    if col == 1:
-        drawPolygon(0*app.cellWidth, 12*app.cellHeight, 1.5*app.cellWidth, 10.5*app.cellHeight,3*app.cellWidth, 10.5*app.cellHeight,3*app.cellWidth, 12*app.cellHeight, fill="cyan")
+def onKeyRelease(app, key):
+    if app.gameStage == "testing":
+        if "s" in key:
+            app.keysPressed[1] = False
+        if "d" in key:
+            app.keysPressed[2] = False
+        if "f" in key:
+            app.keysPressed[3] = False
+        if "j" in key:
+            app.keysPressed[4] = False
+        if "k" in key:
+            app.keysPressed[5] = False
+        if "l" in key:
+            app.keysPressed[6] = False
 
+def drawPressedKeys(app):
+    if app.keysPressed[1]:
+        drawLabel("1", 2*app.cellWidth, 11*app.cellHeight)
+    if app.keysPressed[2]:
+        drawLabel("2", 6*app.cellWidth, 11*app.cellHeight)
+    if app.keysPressed[3]:
+        drawLabel("3", 8.5*app.cellWidth, 11*app.cellHeight)
+    if app.keysPressed[4]:
+        drawLabel("4", 11.5*app.cellWidth, 11*app.cellHeight)
+    if app.keysPressed[5]:
+        drawLabel("5", 14.5*app.cellWidth, 11*app.cellHeight)
+    if app.keysPressed[6]:
+        drawLabel("6", 18*app.cellWidth, 11*app.cellHeight)
     
 
 def main():
