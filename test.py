@@ -2,9 +2,40 @@ from cmu_graphics import *
 from types import SimpleNamespace
 import pygame
 from note import Note
+import librosa
+import numpy as np
+
 def onAppStart(app):
+    song = "this_fffire"
+    audioFile = song+".mp3"
+    y, sr = librosa.load(audioFile)
+    print("loaded")
+    beatFile = song+".txt"
+
+    try:
+        print("file found")
+        f = open(beatFile, 'r')
+        beats = f.read()
+        f.close()
+    except:
+        print("making new file")
+        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+        beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+        f = open(beatFile, 'w')
+        f.write(str(beat_times))
+        beats = beat_times
+        f.close()
+
+    print(str(beats))
+
+
+
+
     pygame.mixer.init()
-    pygame.mixer.music.load("yo_phone_linging.mp3")
+    pygame.mixer.music.load(audioFile)
+    app.musicPlaying = False
+    pygame.mixer.music.play()
+    pygame.mixer.music.pause()
 
     app.width = 1400
     app.height = 600
@@ -42,7 +73,7 @@ def onStep(app):
     col = 1
     for note in app.colNotes[col]:
         note.move(10)
-    print(app.keysPressed)
+    #print(app.keysPressed)
 
 def drawHomeScreen(app):
     drawRect(0,0,app.width, app.height, fill="gray")
@@ -101,7 +132,12 @@ def onMouseMove(app, mouseX, mouseY):
 def onKeyPress(app, key):
 
     if "p" in key:
-        pygame.mixer.music.play()
+        if app.musicPlaying == False:
+            pygame.mixer.music.unpause()
+            app.musicPlaying = True
+        else:
+            pygame.mixer.music.pause()
+            app.musicPlaying = False
     if app.gameStage == "testing":
         if "s" in key:
             app.keysPressed[1] = True
