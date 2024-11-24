@@ -1,20 +1,21 @@
 from cmu_graphics import *
 from types import SimpleNamespace
-import pygame
+import simpleaudio as sa
 from note import Note
 import librosa
 import numpy as np
 
 def onAppStart(app):
     song = "yo_phone_linging"
-    audioFile = song+".mp3"
+    audioFile = song+".wav"
     y, sr = librosa.load(audioFile)
     print("loaded")
     beatFile = song+".txt"
 
+    #beat audio thing
     try:
-        print("file found")
         f = open(beatFile, 'r')
+        print("file found")
         beats = f.read()
         f.close()
     except:
@@ -26,35 +27,41 @@ def onAppStart(app):
         beats = beat_times
         f.close()
 
-    print(str(beats))
+    #print(str(beats))
 
-
-
-
-    pygame.mixer.init()
-    pygame.mixer.music.load(audioFile)
+    wave_obj = sa.WaveObject.from_wave_file(audioFile)
+    app.play_object = wave_obj.play()
+    app.play_object.pause()
     app.musicPlaying = False
-    pygame.mixer.music.play()
-    pygame.mixer.music.pause()
 
     app.width = 1400
-    app.height = 600
+    app.height = 700
+    app.boardH = 600
 
     app.cellWidth = app.width/20
-    app.cellHeight = app.height /12
+    app.cellHeight = (app.height) /13
 
-    app.colWidth = app.width / 6
+    app.colWidth = app.width / 8
 
     app.gameStage = "testing" #home, play, pause, scoreboard
 
     app.stepsPerSecond = 100
     app.scrollSpeed = .1
 
-    app.colNotes = {1:[Note(1, "tap", 0)], 2:[], 3:[], 4:[], 5:[], 6:[]}
+    app.colNotes = {1:[], 2:[], 3:[], 4:[], 5:[], 6:[], 7:[], 8:[]}
+    testInit(app)
     
-    app.keysPressed = {1:False, 2:False, 3:False, 4:False, 5:False, 6:False}
+    app.keysPressed = {1:False, 2:False, 3:False, 4:False, 5:False, 6:False, 7:False, 8:False}
 
+def testInit(app):
+    newNote(app, 1, 200)
+    newNote(app, 2, 300)
+    newNote(app, 3, 500)
+    newNote(app, 1, 500)
 
+    # newNote(app, 4, 200)
+    # newNote(app, 5, 300)
+    # newNote(app, 6, 300)
     
 
 
@@ -70,9 +77,14 @@ def redrawAll(app):
         drawPressedKeys(app)
 
 def onStep(app):
-    col = 1
-    for note in app.colNotes[col]:
-        note.move(10)
+    
+    for col in range(1, 9):
+        for note in app.colNotes[col]:
+            note.move(10)
+            
+            if note.percent < -50:
+                print("missed")
+                app.colNotes[col].pop(0)
     #print(app.keysPressed)
 
 def drawHomeScreen(app):
@@ -91,7 +103,7 @@ def drawGameScreen(app):
 
     drawLine(0*app.cellWidth, 10.5*app.cellHeight, 20*app.cellWidth, 10.5*app.cellHeight)
 
-    for i in range(6):
+    for i in range(8):
         drawLine(i*app.colWidth, 0, i*app.colWidth, app.height)
 
 
@@ -110,77 +122,131 @@ def drawGameScreen(app):
 
     #drawLine(1.5*app.cellWidth, 10.5*app.cellHeight, 18.5*app.cellWidth, 10.5*app.cellHeight)
 
-
-def drawNotes(app):
-    col = 1
-    for note in app.colNotes[col]:
-        drawRect(app.colWidth*(col-1), note.y, note.width, note.height, fill="green")
-    pass
-
-def newNote(app, col):
-    pass
+    drawLine(0, app.boardH-.1*app.boardH, app.width, app.boardH-.1*app.boardH, lineWidth = 3, fill="red")
+    drawLine(0, app.boardH-.03*app.boardH, app.width, app.boardH-.03*app.boardH, lineWidth = 3, fill="yellow")
+    drawLine(0, app.boardH+.03*app.boardH, app.width, app.boardH+.03*app.boardH, lineWidth = 3, fill="yellow")
+    drawLine(0, app.boardH+.1*app.boardH, app.width, app.boardH+.1*app.boardH, lineWidth = 3, fill="red")
 
 
 def drawTesting(app):
     pass
 
 
+
+
+#stuff w notes
+def drawNotes(app):
+    for col in range(1, 9):
+        for note in app.colNotes[col]:
+            if note.drawn == True:
+                print(note)
+                drawRect(app.colWidth*(col-1), note.y-note.height/2, note.width, note.height, fill="green")
+                drawLine(app.colWidth*(col-1), note.y, app.colWidth*col,note.y, fill="black", lineWidth = 5)
+    pass
+
+def newNote(app, col, percent):
+    app.colNotes[col].append(Note(col, "tap", percent))
+    pass
+
+def noteHit(app, col):
+    note = app.colNotes[col][0]
+    if note.percent < 1 and note.percent > -1:
+        print("perfect")
+    elif note.percent < 3 and note.percent > -3:
+        print("great")
+    elif note.percent < 10 and note.percent > -10:
+        print("good")
+    else: 
+        print("bad")
+    app.colNotes[col].pop(0)
+    #add points
+
+
+
+
+
+
+
+#input
 def onMouseMove(app, mouseX, mouseY):
     pass
 
 
 def onKeyPress(app, key):
 
-    if "p" in key:
+    if "t" in key:
+        #control music playing
         if app.musicPlaying == False:
-            pygame.mixer.music.unpause()
+            app.play_object.resume()
             app.musicPlaying = True
         else:
-            pygame.mixer.music.pause()
+            app.play_object.pause()
             app.musicPlaying = False
+
+    #pressing keys
     if app.gameStage == "testing":
+        if "a" in key:
+            processTap(app, 1)
         if "s" in key:
-            app.keysPressed[1] = True
+            processTap(app, 2)
         if "d" in key:
-            app.keysPressed[2] = True
+            processTap(app, 3)
         if "f" in key:
-            app.keysPressed[3] = True
+            processTap(app, 4)
         if "j" in key:
-            app.keysPressed[4] = True
+            processTap(app, 5)
         if "k" in key:
-            app.keysPressed[5] = True
+            processTap(app, 6)
         if "l" in key:
-            app.keysPressed[6] = True
+            processTap(app, 7)
+        if ";" in key:
+            processTap(app, 8)
+
+def processTap(app, col):
+    app.keysPressed[col] = True
+    if len(app.colNotes[col]) != 0 and app.colNotes[col][0].drawn == True:
+        noteHit(app, col)
 
 def onKeyRelease(app, key):
     if app.gameStage == "testing":
-        if "s" in key:
+        if "a" in key:
             app.keysPressed[1] = False
-        if "d" in key:
+        if "s" in key:
             app.keysPressed[2] = False
-        if "f" in key:
+        if "d" in key:
             app.keysPressed[3] = False
-        if "j" in key:
+        if "f" in key:
             app.keysPressed[4] = False
-        if "k" in key:
+        if "j" in key:
             app.keysPressed[5] = False
-        if "l" in key:
+        if "k" in key:
             app.keysPressed[6] = False
+        if "l" in key:
+            app.keysPressed[7] = False
+        if ";" in key:
+            app.keysPressed[8] = False
+
+        if "q" in key:
+            newNote(app, 1, 100)
+        if "w" in key:
+            newNote(app, 2, 100)
+        if "e" in key:
+            newNote(app, 3, 100)
+        if "r" in key:
+            newNote(app, 4, 100)
+        if "u" in key:
+            newNote(app, 5, 100)
+        if "i" in key:
+            newNote(app, 6, 100)
+        if "o" in key:
+            newNote(app, 7, 100)
+        if "p" in key:
+            newNote(app, 8, 100)
 
 def drawPressedKeys(app):
-    if app.keysPressed[1]:
-        drawLabel("1", 2*app.cellWidth, 11*app.cellHeight)
-    if app.keysPressed[2]:
-        drawLabel("2", 6*app.cellWidth, 11*app.cellHeight)
-    if app.keysPressed[3]:
-        drawLabel("3", 8.5*app.cellWidth, 11*app.cellHeight)
-    if app.keysPressed[4]:
-        drawLabel("4", 11.5*app.cellWidth, 11*app.cellHeight)
-    if app.keysPressed[5]:
-        drawLabel("5", 14.5*app.cellWidth, 11*app.cellHeight)
-    if app.keysPressed[6]:
-        drawLabel("6", 18*app.cellWidth, 11*app.cellHeight)
-    
+    for col in range(1, 9):
+        if app.keysPressed[col]:
+            drawLabel(f"{col}", 20+app.colWidth*(col-1), 11*app.cellHeight)
 
 def main():
     print("blehh")
