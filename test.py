@@ -48,17 +48,19 @@ def onAppStart(app):
         colWidth = app.width / 8,
         horizonInitX = app.width/20*8.5,
         horizonColWidth = app.width/20*3/8,
-        horizonY = app.height /13*4,
+        horizonY = app.height /13,
 
         perfectH = app.height*11.25/13
     )
-
-    print("outta here")
     
     app.gameStage = "testing" #home, play, pause, scoreboard
 
     app.stepsPerSecond = 100
-    app.scrollSpeed = .02
+    app.scrollSpeed = .015
+    app.goodLim = 10
+    app.greatLim = 5
+
+
 
     app.colNotes = {1:[], 2:[], 3:[], 4:[], 5:[], 6:[], 7:[], 8:[]}
     testInit(app)
@@ -112,21 +114,17 @@ def drawHomeScreen(app):
 def drawGameScreen(app):
     drawRect(0,0,app.width, app.height, fill="gray")
 
-    drawRect(0, 4*app.boardSpecs.cellHeight, app.width, 8*app.boardSpecs.cellHeight, fill="white")
-
-    drawLine(0*app.boardSpecs.cellWidth, 10.5*app.boardSpecs.cellHeight, 20*app.boardSpecs.cellWidth, 10.5*app.boardSpecs.cellHeight)
-
-    
+    drawRect(0, 0, app.width, 12*app.boardSpecs.cellHeight, fill="white")
 
     for i in range(9):
         drawLine(app.boardSpecs.horizonInitX + i*app.boardSpecs.horizonColWidth, app.boardSpecs.horizonY, i*app.boardSpecs.colWidth, app.boardSpecs.boardH)
         #drawLine(i*app.colWidth, 0, i*app.colWidth, app.height)
     
 
-    drawLine(*perspectivize(app, 0, 10), *perspectivize(app, 8, 10), lineWidth=5, fill="red")
-    drawLine(*perspectivize(app, 0, 3), *perspectivize(app, 8, 3), lineWidth=5, fill="yellow")
-    drawLine(*perspectivize(app, 0, -10), *perspectivize(app, 8, -10), lineWidth=5, fill="red")
-    drawLine(*perspectivize(app, 0, -3), *perspectivize(app, 8, -3), lineWidth=5, fill="yellow")
+    # drawLine(*perspectivize(app, 0, app.goodLim), *perspectivize(app, 8, app.goodLim), lineWidth=5, fill="red")
+    # drawLine(*perspectivize(app, 0, app.greatLim), *perspectivize(app, 8, app.greatLim), lineWidth=5, fill="yellow")
+    # drawLine(*perspectivize(app, 0, -1*app.goodLim), *perspectivize(app, 8, -1*app.goodLim), lineWidth=5, fill="red")
+    # drawLine(*perspectivize(app, 0, -1*app.greatLim), *perspectivize(app, 8, -1*app.greatLim), lineWidth=5, fill="yellow")
 
     drawLine(*perspectivize(app, 0, 0), *perspectivize(app, 8, 0), lineWidth=5, fill="green")
 
@@ -135,7 +133,7 @@ def perspectivize(app, line, percent):
     #returns 2ple, with X and Y coords of that % on that line
     y = app.boardSpecs.horizonY + (100-percent)/100 * (app.boardSpecs.perfectH - app.boardSpecs.horizonY)
     x = ((app.boardSpecs.horizonInitX + line*app.boardSpecs.horizonColWidth)
-        -(100-percent)/100* ((app.boardSpecs.horizonInitX + line*app.boardSpecs.horizonColWidth -app.boardSpecs.colWidth*line)*7.25/8))
+        -(100-percent)/100* ((app.boardSpecs.horizonInitX + line*app.boardSpecs.horizonColWidth -app.boardSpecs.colWidth*line)*10.25/11))
     return (x, y)
 
 def drawTesting(app):
@@ -170,9 +168,9 @@ def noteHit(app, col):
     note = app.colNotes[col][0]
     if note.percent < 1 and note.percent > -1:
         print("perfect")
-    elif note.percent < 3 and note.percent > -3:
+    elif note.percent < app.greatLim and note.percent > -1*app.greatLim:
         print("great")
-    elif note.percent < 10 and note.percent > -10:
+    elif note.percent < app.goodLim and note.percent > -1*app.goodLim:
         print("good")
     else: 
         print("bad")

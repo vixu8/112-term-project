@@ -16,10 +16,9 @@ class Note:
         colWidth = width / 8,
         horizonInitX = width/20*8.5,
         horizonColWidth = width/20*3/8,
-        horizonY = height /13*4,
+        horizonY = height /13,
 
         perfectH = height*11.25/13
-
     )
 
     def __init__(self, col, type, percent):
@@ -37,7 +36,7 @@ class Note:
     def getCoords(self):
         #returns a 8tuple with the 4 coords to draw the note, based on its percentage way down.
         #upper thing will be -.1*(100-percent) to the percent, lower will be +.1*(100-percent)
-        delta = .1*(100-self.percent)
+        delta = .05*(100-self.percent)
         return (*self.perspectivize(self.col-1, self.percent-delta), *self.perspectivize(self.col, self.percent-delta),
                 *self.perspectivize(self.col, self.percent+delta), *self.perspectivize(self.col-1, self.percent+delta))
 
