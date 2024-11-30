@@ -6,8 +6,27 @@ import librosa
 import numpy as np
 
 def onAppStart(app):
-    
-
+    song = "yo_phone_linging"
+    audioFile = song+".wav"
+    y, sr = librosa.load(audioFile)
+    print("loaded")
+    beatFile = song+".txt"
+    '''
+    #beat audio thing
+    try:
+        f = open(beatFile, 'r')
+        print("file found")
+        beats = f.read()
+        f.close()
+    except:
+        print("making new file")
+        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+        beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+        f = open(beatFile, 'w')
+        f.write(str(beat_times))
+        beats = beat_times
+        f.close()
+    '''
     #print(str(beats))
     app.audioFile = None
 
@@ -20,17 +39,30 @@ def onAppStart(app):
 
     app.width = 1400
     app.height = 700
-    app.boardH = 600
 
-    app.cellWidth = app.width/20
-    app.cellHeight = (app.height) /13
+    print("pre")
+    app.boardSpecs = SimpleNamespace(
+        boardH = app.height*12/13,
 
-    app.colWidth = app.width / 8
+        cellWidth = app.width/20,
+        cellHeight = app.height /13,
 
+        colWidth = app.width / 8,
+        horizonInitX = app.width/20*8.5,
+        horizonColWidth = app.width/20*3/8,
+        horizonY = app.height /13,
+
+        perfectH = app.height*11.25/13
+    )
+    
     app.gameStage = "testing" #home, play, pause, scoreboard
 
     app.stepsPerSecond = 100
-    app.scrollSpeed = .1
+    app.scrollSpeed = .015
+    app.goodLim = 10
+    app.greatLim = 5
+
+
 
     app.colNotes = {1:[], 2:[], 3:[], 4:[], 5:[], 6:[], 7:[], 8:[]}
     testInit(app)
@@ -59,14 +91,13 @@ def selectSong(app, song):
         f.close()
 
 def testInit(app):
-    newNote(app, 1, 200)
-    newNote(app, 2, 300)
-    newNote(app, 3, 500)
-    newNote(app, 1, 500)
+    # newNote(app, 1, 120)
+    newNote(app, 2, 120)
+    newNote(app, 3, 150)
 
-    # newNote(app, 4, 200)
-    # newNote(app, 5, 300)
-    # newNote(app, 6, 300)
+    newNote(app, 4, 200)
+    newNote(app, 5, 250)
+    newNote(app, 6, 300)
     
 
 
@@ -78,16 +109,18 @@ def redrawAll(app):
         drawNotes(app)
     if app.gameStage == "testing":
         drawGameScreen(app)
-        drawNotes(app)
         drawPressedKeys(app)
+        drawNotes(app)
+
 
 def onStep(app):
     
     for col in range(1, 9):
         for note in app.colNotes[col]:
-            note.move(10)
+            note.move(app.scrollSpeed * app.stepsPerSecond)
+            print(note)
             
-            if note.percent < -50:
+            if note.percent < -30:
                 print("missed")
                 app.colNotes[col].pop(0)
     #print(app.keysPressed)
@@ -104,34 +137,27 @@ def drawHomeScreen(app):
 def drawGameScreen(app):
     drawRect(0,0,app.width, app.height, fill="gray")
 
-    drawRect(0, 4*app.cellHeight, app.width, 8*app.cellHeight, fill="white")
+    drawRect(0, 0, app.width, 12*app.boardSpecs.cellHeight, fill="white")
 
-    drawLine(0*app.cellWidth, 10.5*app.cellHeight, 20*app.cellWidth, 10.5*app.cellHeight)
-
-    for i in range(8):
-        drawLine(i*app.colWidth, 0, i*app.colWidth, app.height)
-
-
-
-    #drawPolygon(7*app.cellWidth, 4*app.cellHeight, 0, app.height, app.width, app.height, 13*app.cellWidth, 4*app.cellHeight, fill=rgb(219,219,219))    
+    for i in range(9):
+        drawLine(app.boardSpecs.horizonInitX + i*app.boardSpecs.horizonColWidth, app.boardSpecs.horizonY, i*app.boardSpecs.colWidth, app.boardSpecs.boardH)
+        #drawLine(i*app.colWidth, 0, i*app.colWidth, app.height)
     
-    drawLine(0, 4*app.cellHeight, app.width, 4*app.cellHeight, fill="black")
 
-    # drawLine(7*app.cellWidth, 4*app.cellHeight, 0, app.height, fill="black")
-    # drawLine(8*app.cellWidth, 4*app.cellHeight, 3.5*app.cellWidth, app.height, fill="black")
-    # drawLine(9*app.cellWidth, 4*app.cellHeight, 7*app.cellWidth, app.height, fill="black")
-    # drawLine(10*app.cellWidth, 4*app.cellHeight, 10*app.cellWidth, app.height, fill="black")
-    # drawLine(11*app.cellWidth, 4*app.cellHeight, 13*app.cellWidth, app.height, fill="black")
-    # drawLine(12*app.cellWidth, 4*app.cellHeight, 16.5*app.cellWidth, app.height, fill="black")
-    # drawLine(13*app.cellWidth, 4*app.cellHeight, app.width, app.height, fill="black")
+    # drawLine(*perspectivize(app, 0, app.goodLim), *perspectivize(app, 8, app.goodLim), lineWidth=5, fill="red")
+    # drawLine(*perspectivize(app, 0, app.greatLim), *perspectivize(app, 8, app.greatLim), lineWidth=5, fill="yellow")
+    # drawLine(*perspectivize(app, 0, -1*app.goodLim), *perspectivize(app, 8, -1*app.goodLim), lineWidth=5, fill="red")
+    # drawLine(*perspectivize(app, 0, -1*app.greatLim), *perspectivize(app, 8, -1*app.greatLim), lineWidth=5, fill="yellow")
 
-    #drawLine(1.5*app.cellWidth, 10.5*app.cellHeight, 18.5*app.cellWidth, 10.5*app.cellHeight)
+    drawLine(*perspectivize(app, 0, 0), *perspectivize(app, 8, 0), lineWidth=5, fill="green")
 
-    drawLine(0, app.boardH-.1*app.boardH, app.width, app.boardH-.1*app.boardH, lineWidth = 3, fill="red")
-    drawLine(0, app.boardH-.03*app.boardH, app.width, app.boardH-.03*app.boardH, lineWidth = 3, fill="yellow")
-    drawLine(0, app.boardH+.03*app.boardH, app.width, app.boardH+.03*app.boardH, lineWidth = 3, fill="yellow")
-    drawLine(0, app.boardH+.1*app.boardH, app.width, app.boardH+.1*app.boardH, lineWidth = 3, fill="red")
 
+def perspectivize(app, line, percent):
+    #returns 2ple, with X and Y coords of that % on that line
+    y = app.boardSpecs.horizonY + (100-percent)/100 * (app.boardSpecs.perfectH - app.boardSpecs.horizonY)
+    x = ((app.boardSpecs.horizonInitX + line*app.boardSpecs.horizonColWidth)
+        -(100-percent)/100* ((app.boardSpecs.horizonInitX + line*app.boardSpecs.horizonColWidth -app.boardSpecs.colWidth*line)*10.25/11))
+    return (x, y)
 
 def drawTesting(app):
     pass
@@ -144,9 +170,17 @@ def drawNotes(app):
     for col in range(1, 9):
         for note in app.colNotes[col]:
             if note.drawn == True:
-                print(note)
-                drawRect(app.colWidth*(col-1), note.y-note.height/2, note.width, note.height, fill="green")
-                drawLine(app.colWidth*(col-1), note.y, app.colWidth*col,note.y, fill="black", lineWidth = 5)
+                # print("doijfadfjaodsf")
+                coords = note.getCoords()
+                # print(coords)
+                # drawCircle(coords[0], coords[1], 5, fill="green")
+                # drawCircle(coords[2], coords[3], 5, fill="green")
+                # drawCircle(coords[4], coords[5], 5, fill="green")
+                # drawCircle(coords[6], coords[7], 5, fill="green")
+
+                drawPolygon(*note.getCoords(), fill="cyan")
+                # drawRect(app.boardSpecs.colWidth*(col-1), note.y-note.noteHeight/2, note.noteWidth, note.noteHeight, fill="green")
+                # drawLine(app.boardSpecs.colWidth*(col-1), note.y, app.boardSpecs.colWidth*col,note.y, fill="black", lineWidth = 5)
     pass
 
 def newNote(app, col, percent):
@@ -157,9 +191,9 @@ def noteHit(app, col):
     note = app.colNotes[col][0]
     if note.percent < 1 and note.percent > -1:
         print("perfect")
-    elif note.percent < 3 and note.percent > -3:
+    elif note.percent < app.greatLim and note.percent > -1*app.greatLim:
         print("great")
-    elif note.percent < 10 and note.percent > -10:
+    elif note.percent < app.goodLim and note.percent > -1*app.goodLim:
         print("good")
     else: 
         print("bad")
@@ -247,7 +281,7 @@ def onKeyRelease(app, key):
 def drawPressedKeys(app):
     for col in range(1, 9):
         if app.keysPressed[col]:
-            drawLabel(f"{col}", 20+app.colWidth*(col-1), 11*app.cellHeight)
+            drawLabel(f"{col}", 20+app.boardSpecs.colWidth*(col-1), 11*app.boardSpecs.cellHeight)
 
 def main():
     print("blehh")
