@@ -27,10 +27,12 @@ def onAppStart(app):
         beats = beat_times
         f.close()
     '''
-
     #print(str(beats))
+    app.audioFile = None
 
-    wave_obj = sa.WaveObject.from_wave_file(audioFile)
+    selectSong(app, "yo_phone_linging")
+
+    wave_obj = sa.WaveObject.from_wave_file(app.audioFile)
     app.play_object = wave_obj.play()
     app.play_object.pause()
     app.musicPlaying = False
@@ -66,6 +68,27 @@ def onAppStart(app):
     testInit(app)
     
     app.keysPressed = {1:False, 2:False, 3:False, 4:False, 5:False, 6:False, 7:False, 8:False}
+
+def selectSong(app, song):
+    app.audioFile = song+".wav"
+    y, sr = librosa.load(app.audioFile)
+    print("loaded")
+    beatFile = song+".txt"
+
+    #beat audio thing
+    try:
+        f = open(beatFile, 'r')
+        print("file found")
+        beats = f.read()
+        f.close()
+    except:
+        print("making new file")
+        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+        beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+        f = open(beatFile, 'w')
+        f.write(str(beat_times))
+        beats = beat_times
+        f.close()
 
 def testInit(app):
     # newNote(app, 1, 120)
@@ -176,10 +199,6 @@ def noteHit(app, col):
         print("bad")
     app.colNotes[col].pop(0)
     #add points
-
-
-
-
 
 
 
