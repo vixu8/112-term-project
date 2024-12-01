@@ -13,7 +13,12 @@ def onAppStart(app):
     app.audioFile = None
     app.play_object = None
     app.musicPlaying = False
-    # app.timer = None
+    
+    app.combo = 0
+    app.maxCombo = 0
+    app.score = 0
+    app.multiplier = 1
+    app.drawRating = ""
 
     #get sound ready
     selectSong(app, "accumula_town")
@@ -21,7 +26,6 @@ def onAppStart(app):
     app.width = 1400
     app.height = 700
 
-    print("pre")
     app.boardSpecs = SimpleNamespace(
         boardH = app.height*12/13,
 
@@ -36,7 +40,7 @@ def onAppStart(app):
         perfectH = app.height*11.25/13
     )
     
-    app.gameStage = "testing" #home, play, pause, scoreboard
+    app.gameStage = "play" #home, play, pause, scoreboard
 
     app.stepsPerSecond = 60
     app.scrollSpeed = .02
@@ -76,12 +80,15 @@ def selectSong(app, song):
 
         wave_obj = sa.WaveObject.from_wave_file(song+"-fade.wav")
 
-    # app.timer = Timer(librosa.get_duration(y=y, sr=sr))
-    # app.timer.pause()
-
     app.play_object = wave_obj.play()
     app.play_object.pause()
     app.musicPlaying = False
+
+
+    app.combo = 0
+    app.maxCombo = 0
+    app.score = 0
+    app.multiplire = 1
 
 def playMusic(app):
     app.play_object.resume()
@@ -109,6 +116,7 @@ def redrawAll(app):
         drawGameScreen(app)
         drawPressedKeys(app)
         drawNotes(app)
+        drawUI(app)
         
     if app.gameStage == "testing":
         drawGameScreen(app)
@@ -117,17 +125,24 @@ def redrawAll(app):
 
 
 def onStep(app):
-    #app.timer.process()
-    #print(time.time())
-    # print(app.timer)
-    for col in range(1, 9):
-        for note in app.colNotes[col]:
-            note.move(app.scrollSpeed * app.stepsPerSecond)
-            # print(note)
-            
-            if note.percent < -30:
-                # print("missed")
-                app.colNotes[col].pop(0)
+    if app.gameStage == "play":
+        if app.combo >= 30:
+            app.multiplier = 4
+        elif app.combo >= 10:
+            app.multiplier = 2
+        else: app.multiplier = 1
+
+        for col in range(1, 9):
+            for note in app.colNotes[col]:
+                note.move(app.scrollSpeed * app.stepsPerSecond)
+                # print(note)
+                
+                if note.percent < -30:
+                    if app.combo > app.maxCombo:
+                        app.maxCombo = app.combo
+                    app.combo = 0
+                    app.drawRating = "missed"
+                    app.colNotes[col].pop(0)
     #print(app.keysPressed)
 
 def drawHomeScreen(app):
@@ -140,12 +155,25 @@ def drawHomeScreen(app):
     drawLabel("Settings", app.width/2, app.height/2 + 60, fill="white", size=25)
 
 def drawGameScreen(app):
-    drawRect(0,0,app.width, app.height, fill="gray")
+    drawImage('silly.png', 0, 0, width=app.width, height=app.height, visible=True, opacity=50)
 
-    drawRect(0, 0, app.width, 12*app.boardSpecs.cellHeight, fill="white")
+    drawPolygon(app.boardSpecs.horizonInitX, 0,
+                app.width-app.boardSpecs.horizonInitX, 0,
+                app.width, app.boardSpecs.boardH,
+                0, app.boardSpecs.boardH,
+                fill="darkGray",
+                opacity=75)
+
+    drawRect(0, app.boardSpecs.boardH,
+             app.width, app.height-app.boardSpecs.boardH,
+             fill=gradient("darkGray", "gray", start="top"),
+             opacity=75)
+    
+    drawLine(0, app.boardSpecs.boardH, app.width, app.boardSpecs.boardH)
 
     for i in range(9):
         drawLine(app.boardSpecs.horizonInitX + i*app.boardSpecs.horizonColWidth, app.boardSpecs.horizonY, i*app.boardSpecs.colWidth, app.boardSpecs.boardH)
+        drawLine(i*app.boardSpecs.colWidth, app.boardSpecs.boardH, i*app.boardSpecs.colWidth, app.height)
         #drawLine(i*app.colWidth, 0, i*app.colWidth, app.height)
     
 
@@ -156,6 +184,18 @@ def drawGameScreen(app):
 
     drawLine(*perspectivize(app, 0, 0), *perspectivize(app, 8, 0), lineWidth=5, fill="green")
 
+def drawUI(app):
+    drawLabel(f"SCORE: {app.score}", app.boardSpecs.cellWidth*16, 2*app.boardSpecs.cellHeight, size=20, bold=True)
+    drawLabel(f"COMBO: {app.combo}", app.boardSpecs.cellWidth*16, app.boardSpecs.cellHeight, size=30, bold=True)
+
+    if app.drawRating == "perfect":
+        drawLabel("PERFECT!", app.boardSpecs.cellWidth*10, 2*app.boardSpecs.cellHeight, size=40, fill=rgb(20,247,249))
+    elif app.drawRating == "great":
+        drawLabel("Great", app.boardSpecs.cellWidth*10, 2*app.boardSpecs.cellHeight, size=40, fill=rgb(34, 207, 43))
+    elif app.drawRating == "good":
+        drawLabel("good", app.boardSpecs.cellWidth*10, 2*app.boardSpecs.cellHeight, size=40, fill=rgb(128, 243, 134))
+    elif app.drawRating == "missed":
+        drawLabel("miss", app.boardSpecs.cellWidth*10, 2*app.boardSpecs.cellHeight, size=40, fill=rgb(105, 10, 10))
 
 def perspectivize(app, line, percent):
     #returns 2ple, with X and Y coords of that % on that line
@@ -183,7 +223,7 @@ def drawNotes(app):
                 # drawCircle(coords[4], coords[5], 5, fill="green")
                 # drawCircle(coords[6], coords[7], 5, fill="green")
 
-                drawPolygon(*note.getCoords(), fill="cyan")
+                drawPolygon(*note.getCoords(), fill=gradient('yellow', 'orange'), opacity=80)
                 # drawRect(app.boardSpecs.colWidth*(col-1), note.y-note.noteHeight/2, note.noteWidth, note.noteHeight, fill="green")
                 # drawLine(app.boardSpecs.colWidth*(col-1), note.y, app.boardSpecs.colWidth*col,note.y, fill="black", lineWidth = 5)
     pass
@@ -195,13 +235,25 @@ def newNote(app, col, percent):
 def noteHit(app, col):
     note = app.colNotes[col][0]
     if note.percent < 1 and note.percent > -1:
-        print("perfect")
+        app.combo += 1
+        app.score += 200 * app.multiplier
+
+        app.drawRating = "perfect"
     elif note.percent < app.greatLim and note.percent > -1*app.greatLim:
-        print("great")
+        app.combo += 1
+        app.score += 100 * app.multiplier
+
+        app.drawRating = "great"
     elif note.percent < app.goodLim and note.percent > -1*app.goodLim:
-        print("good")
+        app.combo += 1
+        app.score += 50 * app.multiplier
+        app.drawRating = "good"
     else: 
-        print("bad")
+        if app.combo > app.maxCombo:
+            app.maxCombo = app.combo
+        app.combo = 0
+        app.drawRating = "missed"
+
     app.colNotes[col].pop(0)
     #add points
 
@@ -224,7 +276,7 @@ def onKeyPress(app, key):
             app.musicPlaying = False
 
     #pressing keys
-    if app.gameStage == "testing":
+    if app.gameStage == "play":
         if "a" in key:
             processTap(app, 1)
         if "s" in key:
@@ -248,7 +300,7 @@ def processTap(app, col):
         noteHit(app, col)
 
 def onKeyRelease(app, key):
-    if app.gameStage == "testing":
+    if app.gameStage == "play":
         if "a" in key:
             app.keysPressed[1] = False
         if "s" in key:
@@ -290,9 +342,13 @@ def drawPressedKeys(app):
                         app.boardSpecs.colWidth*(col), app.boardSpecs.boardH,
                         app.boardSpecs.horizonInitX+app.boardSpecs.horizonColWidth*(col), app.boardSpecs.horizonY,
                         app.boardSpecs.horizonInitX+app.boardSpecs.horizonColWidth*(col-1), app.boardSpecs.horizonY,
-                        fill=gradient('yellow','white',start='bottom'),
+                        fill=gradient('lightSteelBlue','white',start='bottom'),
                         opacity=50
             )
+            drawRect(app.boardSpecs.colWidth*(col-1), app.boardSpecs.boardH,
+             app.boardSpecs.colWidth, app.height-app.boardSpecs.boardH,
+             fill=gradient("gray", "steelBlue", start="top"),
+             opacity=75)
 
 def main():
     print("blehh")
