@@ -4,38 +4,19 @@ import simpleaudio as sa
 from note import Note
 import librosa
 import numpy as np
+import soundfile
+import time
+from timer import Timer
+
 
 def onAppStart(app):
-    song = "yo_phone_linging"
-    audioFile = song+".wav"
-    y, sr = librosa.load(audioFile)
-    print("loaded")
-    beatFile = song+".txt"
-    '''
-    #beat audio thing
-    try:
-        f = open(beatFile, 'r')
-        print("file found")
-        beats = f.read()
-        f.close()
-    except:
-        print("making new file")
-        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
-        beat_times = librosa.frames_to_time(beat_frames, sr=sr)
-        f = open(beatFile, 'w')
-        f.write(str(beat_times))
-        beats = beat_times
-        f.close()
-    '''
-    #print(str(beats))
     app.audioFile = None
-
-    selectSong(app, "yo_phone_linging")
-
-    wave_obj = sa.WaveObject.from_wave_file(app.audioFile)
-    app.play_object = wave_obj.play()
-    app.play_object.pause()
+    app.play_object = None
     app.musicPlaying = False
+    # app.timer = None
+
+    #get sound ready
+    selectSong(app, "accumula_town")
 
     app.width = 1400
     app.height = 700
@@ -50,47 +31,67 @@ def onAppStart(app):
         colWidth = app.width / 8,
         horizonInitX = app.width/20*8.5,
         horizonColWidth = app.width/20*3/8,
-        horizonY = app.height /13,
+        horizonY = 0*app.height /13,
 
         perfectH = app.height*11.25/13
     )
     
     app.gameStage = "testing" #home, play, pause, scoreboard
 
-    app.stepsPerSecond = 100
-    app.scrollSpeed = .015
+    app.stepsPerSecond = 60
+    app.scrollSpeed = .02
     app.goodLim = 10
     app.greatLim = 5
 
-
-
     app.colNotes = {1:[], 2:[], 3:[], 4:[], 5:[], 6:[], 7:[], 8:[]}
-    testInit(app)
+    #testInit(app)
     
     app.keysPressed = {1:False, 2:False, 3:False, 4:False, 5:False, 6:False, 7:False, 8:False}
 
 def selectSong(app, song):
-    app.audioFile = song+".wav"
-    y, sr = librosa.load(app.audioFile)
-    print("loaded")
-    beatFile = song+".txt"
 
-    #beat audio thing
+    #create fade out audio thing
     try:
-        f = open(beatFile, 'r')
-        print("file found")
-        beats = f.read()
-        f.close()
+        wave_obj = sa.WaveObject.from_wave_file(song+"-fade.wav")
+        print("fade audoi found")
+
+        y, sr = librosa.load(song+"-fade.wav")
     except:
-        print("making new file")
-        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
-        beat_times = librosa.frames_to_time(beat_frames, sr=sr)
-        f = open(beatFile, 'w')
-        f.write(str(beat_times))
-        beats = beat_times
-        f.close()
+        print("making fade audio file")
+
+        y, sr = librosa.load(song+".wav")
+
+        #referenced stack overflow and chatgpt for this.
+        # https://stackoverflow.com/questions/64894809/is-there-a-way-to-make-fade-out-by-librosa-or-another-on-python
+
+        fade_length = 4*sr #4 second fade
+        fade_end = y.shape[0]
+        fade_start = len(y) - fade_length
+
+        fade_curve = np.linspace(1, 0, fade_length)
+
+        y[fade_start:fade_end] = y[fade_start:fade_end] * fade_curve 
+
+        soundfile.write(song+"-fade.wav", y, samplerate=sr)
+
+        wave_obj = sa.WaveObject.from_wave_file(song+"-fade.wav")
+
+    # app.timer = Timer(librosa.get_duration(y=y, sr=sr))
+    # app.timer.pause()
+
+    app.play_object = wave_obj.play()
+    app.play_object.pause()
+    app.musicPlaying = False
+
+def playMusic(app):
+    app.play_object.resume()
+    app.musicPlaying = True
+
+
 
 def testInit(app):
+    playMusic(app)
+
     # newNote(app, 1, 120)
     newNote(app, 2, 120)
     newNote(app, 3, 150)
@@ -106,7 +107,9 @@ def redrawAll(app):
         drawHomeScreen(app)
     if app.gameStage == "play":
         drawGameScreen(app)
+        drawPressedKeys(app)
         drawNotes(app)
+        
     if app.gameStage == "testing":
         drawGameScreen(app)
         drawPressedKeys(app)
@@ -114,14 +117,16 @@ def redrawAll(app):
 
 
 def onStep(app):
-    
+    #app.timer.process()
+    #print(time.time())
+    # print(app.timer)
     for col in range(1, 9):
         for note in app.colNotes[col]:
             note.move(app.scrollSpeed * app.stepsPerSecond)
-            print(note)
+            # print(note)
             
             if note.percent < -30:
-                print("missed")
+                # print("missed")
                 app.colNotes[col].pop(0)
     #print(app.keysPressed)
 
@@ -281,7 +286,13 @@ def onKeyRelease(app, key):
 def drawPressedKeys(app):
     for col in range(1, 9):
         if app.keysPressed[col]:
-            drawLabel(f"{col}", 20+app.boardSpecs.colWidth*(col-1), 11*app.boardSpecs.cellHeight)
+            drawPolygon(  app.boardSpecs.colWidth*(col-1), app.boardSpecs.boardH,
+                        app.boardSpecs.colWidth*(col), app.boardSpecs.boardH,
+                        app.boardSpecs.horizonInitX+app.boardSpecs.horizonColWidth*(col), app.boardSpecs.horizonY,
+                        app.boardSpecs.horizonInitX+app.boardSpecs.horizonColWidth*(col-1), app.boardSpecs.horizonY,
+                        fill=gradient('yellow','white',start='bottom'),
+                        opacity=50
+            )
 
 def main():
     print("blehh")
