@@ -9,6 +9,18 @@ import time
 from timer import Timer
 
 
+'''
+ACTION ITEMS:
+instead of it all as a list, try going with that prev idea of splitting it by line, 
+    with each line having percents from 0 to 100
+so that u can load a line at a time/1 whole section at a time instead of indiv.
+also figure out how to read that.
+
+
+
+'''
+
+
 def onAppStart(app):
     app.song = "accumula_town"
 
@@ -56,6 +68,7 @@ def onAppStart(app):
 
     app.notesLoaded = 0
     app.endReached = False
+    app.playing = False
 
     if app.gameStage == "create":
         prepareCreate(app, app.song)
@@ -117,7 +130,7 @@ def prepareCreate(app, song):
     app.currentPercent = 0
 
 def loadMapFile(app, song):
-    playMusic(app)
+    app.currentPercent = 0
     try:
         app.mapFile = open(song+"-map.txt", "r")
     except:
@@ -129,7 +142,7 @@ def loadNotes(app):
         if line == "end":
             app.endReached = True
         else:
-            newNote(app, int(line[0]), float(line[2:]))
+            newNote(app, int(line[0]), float(line[2:]) - app.currentPercent)
             app.notesLoaded+=1
 
 def testInit(app):
@@ -173,24 +186,28 @@ def onStep(app):
 
     if app.gameStage == "play":
         loadNotes(app)
+
         if app.combo >= 30:
             app.multiplier = 4
         elif app.combo >= 10:
             app.multiplier = 2
         else: app.multiplier = 1
 
-        for col in range(1, 9):
-            for note in app.colNotes[col]:
-                note.move(app.scrollSpeed * app.stepsPerSecond)
-                # print(note)
-                
-                if note.percent < -30:
-                    if app.combo > app.maxCombo:
-                        app.maxCombo = app.combo
-                    app.combo = 0
-                    app.drawRating = "missed"
-                    app.notesLoaded -= 1
-                    app.colNotes[col].pop(0)
+        if app.playing == True:
+            app.currentPercent += app.scrollSpeed * app.stepsPerSecond
+
+            for col in range(1, 9):
+                for note in app.colNotes[col]:
+                    note.move(app.scrollSpeed * app.stepsPerSecond)
+                    # print(note)
+                    
+                    if note.percent < -30:
+                        if app.combo > app.maxCombo:
+                            app.maxCombo = app.combo
+                        app.combo = 0
+                        app.drawRating = "missed"
+                        app.notesLoaded -= 1
+                        app.colNotes[col].pop(0)
     #print(app.keysPressed)
 
 def drawHomeScreen(app):
@@ -345,16 +362,6 @@ def onKeyPress(app, key):
                 app.recording = True
                 playMusic(app)
 
-
-    if "t" in key:
-        #control music playing
-        if app.musicPlaying == False:
-            app.play_object.resume()
-            app.musicPlaying = True
-        else:
-            app.play_object.pause()
-            app.musicPlaying = False
-
     #pressing keys
     if app.gameStage == "play":
         if "a" in key:
@@ -373,6 +380,15 @@ def onKeyPress(app, key):
             processTap(app, 7)
         if ";" in key:
             processTap(app, 8)
+        
+        if "b" in key:
+            if app.playing == True:
+                app.playing = False
+                print("paused")
+                stopMusic(app)
+            else:
+                app.playing = True
+                playMusic(app)
 
 def processTap(app, col):
     app.keysPressed[col] = True
