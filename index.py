@@ -10,6 +10,9 @@ from timer import Timer
 
 
 def onAppStart(app):
+    app.song = "accumula_town"
+
+
     app.audioFile = None
     app.play_object = None
     app.musicPlaying = False
@@ -21,7 +24,7 @@ def onAppStart(app):
     app.drawRating = ""
 
     #get sound ready
-    selectSong(app, "accumula_town")
+    selectSong(app, app.song)
 
     app.width = 1400
     app.height = 700
@@ -40,13 +43,24 @@ def onAppStart(app):
         perfectH = app.height*11.25/13
     )
     
-    app.gameStage = "play" #home, play, pause, scoreboard
+    app.gameStage = "play" #home, play, pause, scoreboard, create
 
     app.stepsPerSecond = 60
     app.scrollSpeed = .02
     app.goodLim = 10
     app.greatLim = 5
 
+    app.currentPercent = 0
+    app.writeFile = None
+    app.recording = False
+
+    app.notesLoaded = 0
+    app.endReached = False
+
+    if app.gameStage == "create":
+        prepareCreate(app, app.song)
+    elif app.gameStage == "play":
+        loadMapFile(app, app.song)
     app.colNotes = {1:[], 2:[], 3:[], 4:[], 5:[], 6:[], 7:[], 8:[]}
     #testInit(app)
     
@@ -94,7 +108,29 @@ def playMusic(app):
     app.play_object.resume()
     app.musicPlaying = True
 
+def stopMusic(app):
+    app.play_object.pause()
+    app.musicPlaying = False
 
+def prepareCreate(app, song):
+    app.writeFile = open(song+"-map.txt", "w")
+    app.currentPercent = 0
+
+def loadMapFile(app, song):
+    playMusic(app)
+    try:
+        app.mapFile = open(song+"-map.txt", "r")
+    except:
+        print("no map foud :(")
+
+def loadNotes(app):
+    while app.notesLoaded < 90 and app.endReached == False:
+        line = app.mapFile.readline()
+        if line == "end":
+            app.endReached = True
+        else:
+            newNote(app, int(line[0]), float(line[2:]))
+            app.notesLoaded+=1
 
 def testInit(app):
     playMusic(app)
@@ -112,20 +148,31 @@ def testInit(app):
 def redrawAll(app):
     if app.gameStage == "home":
         drawHomeScreen(app)
+    
+    if app.gameStage == "create":
+        drawGameScreen(app)
+        drawPressedKeys(app)
+        drawNotes(app)
+
     if app.gameStage == "play":
         drawGameScreen(app)
         drawPressedKeys(app)
         drawNotes(app)
         drawUI(app)
-        
-    if app.gameStage == "testing":
-        drawGameScreen(app)
-        drawPressedKeys(app)
-        drawNotes(app)
 
 
 def onStep(app):
+    if app.gameStage == "create":
+        if app.recording == True:
+            app.currentPercent += app.scrollSpeed * app.stepsPerSecond
+            for col in range(1, 9):
+                for note in app.colNotes[col]:
+                    note.move(-1*app.scrollSpeed * app.stepsPerSecond)
+                    if note.percent > 100:
+                        app.colNotes[col].pop(0)
+
     if app.gameStage == "play":
+        loadNotes(app)
         if app.combo >= 30:
             app.multiplier = 4
         elif app.combo >= 10:
@@ -142,6 +189,7 @@ def onStep(app):
                         app.maxCombo = app.combo
                     app.combo = 0
                     app.drawRating = "missed"
+                    app.notesLoaded -= 1
                     app.colNotes[col].pop(0)
     #print(app.keysPressed)
 
@@ -255,6 +303,7 @@ def noteHit(app, col):
         app.drawRating = "missed"
 
     app.colNotes[col].pop(0)
+    app.notesLoaded -= 1
     #add points
 
 
@@ -263,8 +312,39 @@ def noteHit(app, col):
 def onMouseMove(app, mouseX, mouseY):
     pass
 
+def makeNote(app, col):
+    newNote(app, col, 0)
+    app.writeFile.write(f"{col} {app.currentPercent}\n")
 
 def onKeyPress(app, key):
+    if app.gameStage == "create":
+        if "a" in key:
+            makeNote(app, 1)
+        if "s" in key:
+            makeNote(app, 2)
+        if "d" in key:
+            makeNote(app, 3)
+        if "f" in key:
+            makeNote(app, 4)
+        if "j" in key:
+            makeNote(app, 5)
+        if "k" in key:
+            makeNote(app, 6)
+        if "l" in key:
+            makeNote(app, 7)
+        if ";" in key:
+            makeNote(app, 8)
+        if "b" in key:
+            if app.recording == True:
+                app.recording = False
+                app.writeFile.write("end")
+                print("stoped writing")
+                app.writeFile.close()
+                stopMusic(app)
+            else:
+                app.recording = True
+                playMusic(app)
+
 
     if "t" in key:
         #control music playing
@@ -300,7 +380,7 @@ def processTap(app, col):
         noteHit(app, col)
 
 def onKeyRelease(app, key):
-    if app.gameStage == "play":
+    if app.gameStage == "play" or app.gameStage == "create":
         if "a" in key:
             app.keysPressed[1] = False
         if "s" in key:
