@@ -9,7 +9,22 @@ import time
 from timer import Timer
 
 
+'''
+ACTION ITEMS:
+instead of it all as a list, try going with that prev idea of splitting it by line, 
+    with each line having percents from 0 to 100
+so that u can load a line at a time/1 whole section at a time instead of indiv.
+also figure out how to read that.
+
+
+
+'''
+
+
 def onAppStart(app):
+    app.song = "accumula_town"
+
+
     app.audioFile = None
     app.play_object = None
     app.musicPlaying = False
@@ -21,7 +36,7 @@ def onAppStart(app):
     app.drawRating = ""
 
     #get sound ready
-    selectSong(app, "accumula_town")
+    selectSong(app, app.song)
 
     app.width = 1400
     app.height = 700
@@ -40,13 +55,25 @@ def onAppStart(app):
         perfectH = app.height*11.25/13
     )
     
-    app.gameStage = "play" #home, play, pause, scoreboard
+    app.gameStage = "play" #home, play, pause, scoreboard, create
 
-    app.stepsPerSecond = 60
-    app.scrollSpeed = .02
+    app.stepsPerSecond = 50
+    app.travelTimeSec = 1.5
     app.goodLim = 10
     app.greatLim = 5
 
+    app.currentPercent = 0
+    app.writeFile = None
+    app.recording = False
+
+    app.notesLoaded = 0
+    app.endReached = False
+    app.playing = False
+
+    if app.gameStage == "create":
+        prepareCreate(app, app.song)
+    elif app.gameStage == "play":
+        loadMapFile(app, app.song)
     app.colNotes = {1:[], 2:[], 3:[], 4:[], 5:[], 6:[], 7:[], 8:[]}
     #testInit(app)
     
@@ -80,6 +107,22 @@ def selectSong(app, song):
 
         wave_obj = sa.WaveObject.from_wave_file(song+"-fade.wav")
 
+
+    beatFile = song+".txt"
+    try:
+        f = open(beatFile, 'r')
+        print("file found")
+        beats = f.read()
+        f.close()
+    except:
+        print("making new file")
+        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+        beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+        f = open(beatFile, 'w')
+        f.write(str(beat_times))
+        beats = beat_times
+        f.close()
+
     app.play_object = wave_obj.play()
     app.play_object.pause()
     app.musicPlaying = False
@@ -94,7 +137,29 @@ def playMusic(app):
     app.play_object.resume()
     app.musicPlaying = True
 
+def stopMusic(app):
+    app.play_object.pause()
+    app.musicPlaying = False
 
+def prepareCreate(app, song):
+    app.writeFile = open(song+"-map.txt", "w")
+    app.currentPercent = 0
+
+def loadMapFile(app, song):
+    app.currentPercent = 0
+    try:
+        app.mapFile = open(song+"-map.txt", "r")
+    except:
+        print("no map foud :(")
+
+def loadNotes(app):
+    while app.notesLoaded < 90 and app.endReached == False:
+        line = app.mapFile.readline()
+        if line == "end":
+            app.endReached = True
+        else:
+            newNote(app, int(line[0]), float(line[2:]) - app.currentPercent)
+            app.notesLoaded+=1
 
 def testInit(app):
     playMusic(app)
@@ -112,37 +177,60 @@ def testInit(app):
 def redrawAll(app):
     if app.gameStage == "home":
         drawHomeScreen(app)
+    
+    if app.gameStage == "create":
+        drawGameScreen(app)
+        drawPressedKeys(app)
+        drawNotes(app)
+
     if app.gameStage == "play":
         drawGameScreen(app)
         drawPressedKeys(app)
         drawNotes(app)
         drawUI(app)
-        
-    if app.gameStage == "testing":
-        drawGameScreen(app)
-        drawPressedKeys(app)
-        drawNotes(app)
 
 
 def onStep(app):
+    if app.gameStage == "create":
+        if app.recording == True:
+            app.currentPercent += 100/(app.travelTimeSec * app.stepsPerSecond)
+            for col in range(1, 9):
+                for note in app.colNotes[col]:
+                    note.move(-1*100/(app.travelTimeSec * app.stepsPerSecond))
+                    if note.percent > 100:
+                        app.colNotes[col].pop(0)
+
     if app.gameStage == "play":
+        loadNotes(app)
+
+        
+
         if app.combo >= 30:
             app.multiplier = 4
         elif app.combo >= 10:
             app.multiplier = 2
         else: app.multiplier = 1
 
-        for col in range(1, 9):
-            for note in app.colNotes[col]:
-                note.move(app.scrollSpeed * app.stepsPerSecond)
-                # print(note)
-                
-                if note.percent < -30:
-                    if app.combo > app.maxCombo:
-                        app.maxCombo = app.combo
-                    app.combo = 0
-                    app.drawRating = "missed"
-                    app.colNotes[col].pop(0)
+        if app.playing == True:
+            app.currentPercent += 100/(app.travelTimeSec * app.stepsPerSecond)
+
+            for col in range(1, 9):
+                for note in app.colNotes[col]:
+                    note.move(100/(app.travelTimeSec * app.stepsPerSecond))
+                    # print(note)
+                    
+                    if note.percent < -30:
+                        if app.combo > app.maxCombo:
+                            app.maxCombo = app.combo
+                        app.combo = 0
+                        app.drawRating = "missed"
+                        app.notesLoaded -= 1
+                        app.colNotes[col].pop(0)
+    
+        if (app.endReached == True
+            and app.notesLoaded == 0
+            and app.musicPlaying == True):
+                stopMusic(app)
     #print(app.keysPressed)
 
 def drawHomeScreen(app):
@@ -255,6 +343,7 @@ def noteHit(app, col):
         app.drawRating = "missed"
 
     app.colNotes[col].pop(0)
+    app.notesLoaded -= 1
     #add points
 
 
@@ -263,17 +352,38 @@ def noteHit(app, col):
 def onMouseMove(app, mouseX, mouseY):
     pass
 
+def makeNote(app, col):
+    newNote(app, col, 0)
+    app.writeFile.write(f"{col} {app.currentPercent}\n")
 
 def onKeyPress(app, key):
-
-    if "t" in key:
-        #control music playing
-        if app.musicPlaying == False:
-            app.play_object.resume()
-            app.musicPlaying = True
-        else:
-            app.play_object.pause()
-            app.musicPlaying = False
+    if app.gameStage == "create":
+        if "a" in key:
+            makeNote(app, 1)
+        if "s" in key:
+            makeNote(app, 2)
+        if "d" in key:
+            makeNote(app, 3)
+        if "f" in key:
+            makeNote(app, 4)
+        if "j" in key:
+            makeNote(app, 5)
+        if "k" in key:
+            makeNote(app, 6)
+        if "l" in key:
+            makeNote(app, 7)
+        if ";" in key:
+            makeNote(app, 8)
+        if "b" in key:
+            if app.recording == True:
+                app.recording = False
+                app.writeFile.write("end")
+                print("stoped writing")
+                app.writeFile.close()
+                stopMusic(app)
+            else:
+                app.recording = True
+                playMusic(app)
 
     #pressing keys
     if app.gameStage == "play":
@@ -293,6 +403,15 @@ def onKeyPress(app, key):
             processTap(app, 7)
         if ";" in key:
             processTap(app, 8)
+        
+        if "b" in key:
+            if app.playing == True:
+                app.playing = False
+                print("paused")
+                stopMusic(app)
+            else:
+                app.playing = True
+                playMusic(app)
 
 def processTap(app, col):
     app.keysPressed[col] = True
@@ -300,7 +419,7 @@ def processTap(app, col):
         noteHit(app, col)
 
 def onKeyRelease(app, key):
-    if app.gameStage == "play":
+    if app.gameStage == "play" or app.gameStage == "create":
         if "a" in key:
             app.keysPressed[1] = False
         if "s" in key:
