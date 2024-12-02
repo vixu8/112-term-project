@@ -57,8 +57,8 @@ def onAppStart(app):
     
     app.gameStage = "play" #home, play, pause, scoreboard, create
 
-    app.stepsPerSecond = 60
-    app.scrollSpeed = .02
+    app.stepsPerSecond = 50
+    app.travelTimeSec = 1.5
     app.goodLim = 10
     app.greatLim = 5
 
@@ -106,6 +106,22 @@ def selectSong(app, song):
         soundfile.write(song+"-fade.wav", y, samplerate=sr)
 
         wave_obj = sa.WaveObject.from_wave_file(song+"-fade.wav")
+
+
+    beatFile = song+".txt"
+    try:
+        f = open(beatFile, 'r')
+        print("file found")
+        beats = f.read()
+        f.close()
+    except:
+        print("making new file")
+        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+        beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+        f = open(beatFile, 'w')
+        f.write(str(beat_times))
+        beats = beat_times
+        f.close()
 
     app.play_object = wave_obj.play()
     app.play_object.pause()
@@ -177,15 +193,17 @@ def redrawAll(app):
 def onStep(app):
     if app.gameStage == "create":
         if app.recording == True:
-            app.currentPercent += app.scrollSpeed * app.stepsPerSecond
+            app.currentPercent += 100/(app.travelTimeSec * app.stepsPerSecond)
             for col in range(1, 9):
                 for note in app.colNotes[col]:
-                    note.move(-1*app.scrollSpeed * app.stepsPerSecond)
+                    note.move(-1*100/(app.travelTimeSec * app.stepsPerSecond))
                     if note.percent > 100:
                         app.colNotes[col].pop(0)
 
     if app.gameStage == "play":
         loadNotes(app)
+
+        
 
         if app.combo >= 30:
             app.multiplier = 4
@@ -194,11 +212,11 @@ def onStep(app):
         else: app.multiplier = 1
 
         if app.playing == True:
-            app.currentPercent += app.scrollSpeed * app.stepsPerSecond
+            app.currentPercent += 100/(app.travelTimeSec * app.stepsPerSecond)
 
             for col in range(1, 9):
                 for note in app.colNotes[col]:
-                    note.move(app.scrollSpeed * app.stepsPerSecond)
+                    note.move(100/(app.travelTimeSec * app.stepsPerSecond))
                     # print(note)
                     
                     if note.percent < -30:
@@ -208,6 +226,11 @@ def onStep(app):
                         app.drawRating = "missed"
                         app.notesLoaded -= 1
                         app.colNotes[col].pop(0)
+    
+        if (app.endReached == True
+            and app.notesLoaded == 0
+            and app.musicPlaying == True):
+                stopMusic(app)
     #print(app.keysPressed)
 
 def drawHomeScreen(app):
