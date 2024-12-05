@@ -58,7 +58,7 @@ def onAppStart(app):
     app.gameStage = "play" #home, play, pause, scoreboard, create
 
     app.stepsPerSecond = 50
-    app.travelTimeSec = 1.5
+    app.travelTimeSec = 1.05
     app.goodLim = 10
     app.greatLim = 5
 
@@ -131,7 +131,7 @@ def selectSong(app, song):
     app.combo = 0
     app.maxCombo = 0
     app.score = 0
-    app.multiplire = 1
+    app.multiplier= 1
 
 def playMusic(app):
     app.play_object.resume()
