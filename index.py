@@ -40,7 +40,7 @@ def onAppStart(app):
         perfectH = app.height*11.25/13
     )
     
-    app.gameStage = "play" #home, play, pause, scoreboard
+    app.gameStage = "home" #home, play, pause, scoreboard
 
     app.stepsPerSecond = 60
     app.scrollSpeed = .02
@@ -146,13 +146,12 @@ def onStep(app):
     #print(app.keysPressed)
 
 def drawHomeScreen(app):
-    drawRect(0,0,app.width, app.height, fill="gray")
+    drawRect(0,0,app.width, app.height, fill="lightGray")
     drawLabel("Welcome to my term project!", app.width/2, 3*app.height/8, fill="white", size=50)
     drawLabel("Start", app.width/2, app.height/2 - 20, fill="white", size=30)
 
 
     drawLabel("About", app.width/2, app.height/2 + 20, fill="white", size=25)
-    drawLabel("Settings", app.width/2, app.height/2 + 60, fill="white", size=25)
 
 def drawGameScreen(app):
     drawImage('silly.png', 0, 0, width=app.width, height=app.height, visible=True, opacity=50)
@@ -204,11 +203,14 @@ def perspectivize(app, line, percent):
         -(100-percent)/100* ((app.boardSpecs.horizonInitX + line*app.boardSpecs.horizonColWidth -app.boardSpecs.colWidth*line)*10.25/11))
     return (x, y)
 
-def drawTesting(app):
-    pass
+def drawButton(app, button):
+    if button.selected:
+        drawRect(button.centerX - button.totalW/2, button.centerY - button.totalH/2, button.totalW, button.totalH, fill=button.colorSelected, border="black")
+    else: 
+        drawRect(button.centerX - button.totalW/2, button.centerY - button.totalH/2, button.totalW, button.totalH, fill=button.colorUnselected, border="black")
 
-
-
+    drawLabel(button.text, button.centerX, button.centerY, size = button.textSize, fill="white")
+    
 
 #stuff w notes
 def drawNotes(app):
