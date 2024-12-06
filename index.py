@@ -35,6 +35,12 @@ def onAppStart(app):
     app.multiplier = 1
     app.drawRating = ""
 
+    app.misses = 0
+    app.good = 0
+    app.great = 0
+    app.perfect = 0
+
+
     app.width = 1400
     app.height = 700
 
@@ -163,6 +169,13 @@ def startPlay(app):
     app.score = 0
     app.multiplier= 1
 
+    app.misses = 0
+    app.good = 0
+    app.great = 0
+    app.perfect = 0
+
+    app.accuracy = 0
+
     app.endReached = False
     app.playing = True
     playMusic(app)
@@ -274,15 +287,12 @@ def onStep(app):
                         app.colNotes[col].pop(0)
 
     if app.gameStage == "play":
-        print(app.currentDelTime)
-        print(time.time(), "current")
-        print(app.endTime, "lim")
-        print(app.songLength, "length")
-        print(app.startTime, "started at")
         app.currentDelTime = time.time() - app.startTime
         if time.time() + .2 >= app.endTime:
             stopMusic(app)
             print("STOP!!!!")
+
+            app.accuracy = (int((app.great+app.good+app.perfect)/(app.misses+app.great+app.good+app.perfect)*10000))/100
 
             app.playing = False
             app.gameStage = "score"
@@ -311,6 +321,7 @@ def onStep(app):
                                 app.maxCombo = app.combo
                             app.combo = 0
                             app.drawRating = "missed"
+                            app.misses += 1
                             app.notesLoaded -= 1
                             app.colNotes[col].pop(0)
         
@@ -397,9 +408,39 @@ def drawSelectScreen(app):
 
 def drawScoreScreen(app):
     drawRect(0,0,app.width, app.height, fill="pink")
-    drawLabel("song complete!", app.width/2, 3*app.height/8, size=80)
-    drawLabel(f"score: {app.score}", app.width/2, 6*app.height/8, size=30)
-    drawLabel(f"max combo: {app.maxCombo}", app.width/2, 7*app.height/8, size=30)
+
+    drawRect(app.width/2, app.height/8, app.width*5/12, app.height*3/8, fill="lightGreen")
+    drawRect(app.width/2, 4.5*app.height/8, app.width*5/12, 1.5*app.height/8, fill="lightGreen")
+
+
+
+    drawLabel("Song complete!", app.width/4, 3*app.height/8, size=80)
+
+    drawLabel(f"Score:", 7*app.width/12, 2.5*app.height/8, size=30)
+    drawLabel(f"{app.score}", 7*app.width/12, 3*app.height/8, size=50)
+
+    #draw big letter
+    if app.accuracy >= 85:
+        drawLabel("A", 5*app.width/6, 2.5*app.height/8, size=100, fill="gold")
+    elif app.accuracy >= 70:
+        drawLabel("B", 5*app.width/6, 2.5*app.height/8, size=100, fill="gold")
+    elif app.accuracy >= 50:
+        drawLabel("C", 5*app.width/6, 2.5*app.height/8, size=100, fill="gold")
+    else:
+        drawLabel("D", 5*app.width/6, 2.5*app.height/8, size=100, fill="gold")
+
+
+
+
+
+    drawLabel(f"{app.maxCombo}", 4*app.width/7, 5*app.height/8, size=30)
+    drawLabel("max combo", 4*app.width/7, 5.5*app.height/8, size=20)
+
+    drawLabel(f"{app.accuracy}%", 5*app.width/6, 5*app.height/8, size=30)
+    drawLabel("accuracy", 5*app.width/6, 5.5*app.height/8, size=30)
+
+
+
 
     for button in app.buttonReturn:
         drawButton(app, button)
@@ -411,12 +452,6 @@ def drawNotes(app):
     for col in range(1, 9):
         for note in app.colNotes[col]:
             if note.drawn == True:
-                # print("doijfadfjaodsf")
-                #                 # print(coords)
-                # drawCircle(coords[0], coords[1], 5, fill="green")
-                # drawCircle(coords[2], coords[3], 5, fill="green")
-                # drawCircle(coords[4], coords[5], 5, fill="green")
-                # drawCircle(coords[6], coords[7], 5, fill="green")
 
                 drawPolygon(*note.getCoords(app.currentDelTime), fill=gradient('yellow', 'orange'), opacity=80)
                 # drawRect(app.boardSpecs.colWidth*(col-1), note.y-note.noteHeight/2, note.noteWidth, note.noteHeight, fill="green")
@@ -432,21 +467,23 @@ def noteHit(app, col):
     if note.time-app.currentDelTime <= .01 and note.time-app.currentDelTime >= -.01:
         app.combo += 1
         app.score += 200 * app.multiplier
-
+        app.perfect += 1
         app.drawRating = "perfect"
     elif note.time-app.currentDelTime < app.greatLim and note.time-app.currentDelTime > -1*app.greatLim:
         app.combo += 1
         app.score += 100 * app.multiplier
-
+        app.great += 1
         app.drawRating = "great"
     elif note.time-app.currentDelTime < app.goodLim and note.time-app.currentDelTime > -1*app.goodLim:
         app.combo += 1
         app.score += 50 * app.multiplier
+        app.good += 1
         app.drawRating = "good"
     else: 
         if app.combo > app.maxCombo:
             app.maxCombo = app.combo
         app.combo = 0
+        app.misses += 1
         app.drawRating = "missed"
 
     app.colNotes[col].pop(0)
