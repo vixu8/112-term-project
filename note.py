@@ -18,27 +18,33 @@ class Note:
         horizonColWidth = width/20*3/8,
         horizonY = 0*height /13,
 
-        perfectH = height*11.25/13
+        perfectH = height*11.25/13,
+
+        travelTimeSec = 2
+
     )
 
-    def __init__(self, col, type, percent):
+    def __init__(self, col, type, time, up=False):
         self.col = col
         self.type = type
-        self.percent = percent
+        self.time = time
 
-        if self.percent < 100:
-            self.drawn = True
-        else: self.drawn = False
+        self.drawn = True
+
+        self.up = up
 
     def __repr__(self):
-        return f"Note, col {self.col}, at {self.percent}%, drawn is {self.drawn}"
+        return f"Note, col {self.col}, at {self.time}, drawn is {self.drawn}"
         
-    def getCoords(self):
+    def getCoords(self, curTime):
+        percent = (self.time - curTime)*100 / Note.boardSpecs.travelTimeSec
+        if self.up:
+            percent *= -1
         #returns a 8tuple with the 4 coords to draw the note, based on its percentage way down.
         #upper thing will be -.1*(100-percent) to the percent, lower will be +.1*(100-percent)
-        delta = .025*(100-self.percent)
-        return (*self.perspectivize(self.col-1, self.percent-delta), *self.perspectivize(self.col, self.percent-delta),
-                *self.perspectivize(self.col, self.percent+delta), *self.perspectivize(self.col-1, self.percent+delta))
+        delta = .025*(100-percent)
+        return (*self.perspectivize(self.col-1, percent-delta), *self.perspectivize(self.col, percent-delta),
+                *self.perspectivize(self.col, percent+delta), *self.perspectivize(self.col-1, percent+delta))
 
     def perspectivize(self, line, percent):
         #returns 2ple, with X and Y coords of that % on that line
@@ -49,12 +55,12 @@ class Note:
             -(100-percent)/100* ((Note.boardSpecs.horizonInitX + line*Note.boardSpecs.horizonColWidth -Note.boardSpecs.colWidth*line)*7.5/8))
         return (x, y)
 
-    def move(self, inc):
+    # def move(self, inc):
 
-        self.percent -= inc
+    #     self.percent -= inc
 
-        if self.percent < 100 and self.percent >= -20:
-            self.drawn = True
-        else: self.drawn = False
+    #     if self.percent < 100 and self.percent >= -20:
+    #         self.drawn = True
+    #     else: self.drawn = False
     
     

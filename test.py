@@ -6,7 +6,7 @@ import librosa
 import numpy as np
 import soundfile
 import time
-from timer import Timer
+from button import Button
 
 
 '''
@@ -35,9 +35,6 @@ def onAppStart(app):
     app.multiplier = 1
     app.drawRating = ""
 
-    #get sound ready
-    selectSong(app, app.song)
-
     app.width = 1400
     app.height = 700
 
@@ -55,27 +52,56 @@ def onAppStart(app):
         perfectH = app.height*11.25/13
     )
     
-    app.gameStage = "play" #home, play, pause, scoreboard, create
-
+    app.gameStage = "home" #home, play, create, select, score
+#====general game vars====
     app.stepsPerSecond = 50
-    app.travelTimeSec = 1.5
-    app.goodLim = 10
-    app.greatLim = 5
+    app.travelTimeSec = 2
+    app.goodLim = .1* app.travelTimeSec
+    app.greatLim = .05*app.travelTimeSec
 
-    app.currentPercent = 0
+    app.startTime = time.time()
+    app.songLength = 0
+    app.currentDelTime = 0
+    app.endTime = 0
+
+#====create map vars====
+    
     app.writeFile = None
     app.recording = False
-
+#==== play game vars===
     app.notesLoaded = 0
     app.endReached = False
     app.playing = False
 
-    if app.gameStage == "create":
-        prepareCreate(app, app.song)
-    elif app.gameStage == "play":
-        loadMapFile(app, app.song)
+    app.buttonsHome ={
+        Button(app.width/2, app.height/2 - 20, 200, 50, "Start Play", "green", "lightGreen", 30): startPlay,
+        Button(app.width/2, app.height/2 + 40, 200, 50, "Start Create", "blue", "lightBlue", 30): startCreate,
+        Button(app.width/2, app.height/2 + 100, 200, 50, "Select Song", "gray", "lightGray", 30): startSelect
+    }
+
+    app.songList = [
+        "this_fffire",
+        "accumula_town",
+        "apple_cider",
+        "12_51",
+        "clip"
+    ]
+
+    app.buttonsSelect = {
+        Button(app.width/2, app.height/2 - 80, 250, 50, app.songList[0], "blue", "lightBlue", 30): 0,
+        Button(app.width/2, app.height/2 - 20, 250, 50, app.songList[1], "blue", "lightBlue", 30): 1,
+        Button(app.width/2, app.height/2 + 40, 250, 50, app.songList[2], "blue", "lightBlue", 30): 2,
+        Button(app.width/2, app.height/2 + 100, 250, 50, app.songList[3], "blue", "lightBlue", 30): 3,
+        Button(app.width/2, app.height/2 + 160, 250, 50, app.songList[4], "blue", "lightBlue", 30): 4,
+
+        Button(50, 50, 50, 50, "<", "gray", "lightGray", 50): returnHome
+    }
+
+    app.buttonReturn = {
+        Button(50, 50, 50, 50, "<", "gray", "lightGray", 50): returnHome
+    }
+
     app.colNotes = {1:[], 2:[], 3:[], 4:[], 5:[], 6:[], 7:[], 8:[]}
-    #testInit(app)
     
     app.keysPressed = {1:False, 2:False, 3:False, 4:False, 5:False, 6:False, 7:False, 8:False}
 
@@ -108,31 +134,82 @@ def selectSong(app, song):
         wave_obj = sa.WaveObject.from_wave_file(song+"-fade.wav")
 
 
-    beatFile = song+".txt"
-    try:
-        f = open(beatFile, 'r')
-        print("file found")
-        beats = f.read()
-        f.close()
-    except:
-        print("making new file")
-        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
-        beat_times = librosa.frames_to_time(beat_frames, sr=sr)
-        f = open(beatFile, 'w')
-        f.write(str(beat_times))
-        beats = beat_times
-        f.close()
+    app.songLength = librosa.get_duration(y=y, sr=sr)
 
     app.play_object = wave_obj.play()
     app.play_object.pause()
     app.musicPlaying = False
 
 
+#=================play functions==================
+def clearNotes(app):
+    app.colNotes = {1:[], 2:[], 3:[], 4:[], 5:[], 6:[], 7:[], 8:[]}
+    app.keysPressed = {1:False, 2:False, 3:False, 4:False, 5:False, 6:False, 7:False, 8:False}
+
+
+def startPlay(app):
+    clearNotes(app)
+    selectSong(app, app.song)
+    print("play mode")
+    if loadMapFile(app, app.song) == False:
+        return
+    
+    time.sleep(2)
+
+    app.currentDelTime = 0
+
     app.combo = 0
     app.maxCombo = 0
     app.score = 0
     app.multiplier= 1
 
+    app.endReached = False
+    app.playing = True
+    playMusic(app)
+    app.startTime = time.time()
+    app.endTime = app.startTime + app.songLength
+
+    app.gameStage = "play"
+
+
+def loadMapFile(app, song):
+    try:
+        app.mapFile = open(song+"-map.txt", "r")
+        return True
+    except:
+        return False
+        print("no map foud :(")
+
+#=================create functions==================
+def startCreate(app):
+    selectSong(app, app.song)
+    prepareCreate(app, app.song)
+    app.recording = True
+    playMusic(app)
+    app.gameStage = "create"
+    app.startTime = time.time()
+    app.endTime = app.startTime + app.songLength
+
+    print("create mode")
+
+def prepareCreate(app, song):
+    app.writeFile = open(song+"-map.txt", "w")
+
+
+#=================select functions==================
+def startSelect(app):
+    app.gameStage = "select"
+    print("select mode)")
+
+def changeSongTo(app, index):
+    app.song = app.songList[index]
+
+def returnHome(app):
+    app.ended = False
+    app.recording = False
+    app.gameStage = "home"
+
+#=============================
 def playMusic(app):
     app.play_object.resume()
     app.musicPlaying = True
@@ -141,38 +218,17 @@ def stopMusic(app):
     app.play_object.pause()
     app.musicPlaying = False
 
-def prepareCreate(app, song):
-    app.writeFile = open(song+"-map.txt", "w")
-    app.currentPercent = 0
 
-def loadMapFile(app, song):
-    app.currentPercent = 0
-    try:
-        app.mapFile = open(song+"-map.txt", "r")
-    except:
-        print("no map foud :(")
+
 
 def loadNotes(app):
-    while app.notesLoaded < 90 and app.endReached == False:
+    while app.notesLoaded < 30 and app.endReached == False:
         line = app.mapFile.readline()
         if line == "end":
             app.endReached = True
         else:
-            newNote(app, int(line[0]), float(line[2:]) - app.currentPercent)
+            newNote(app, int(line[0]), float(line[2:]))
             app.notesLoaded+=1
-
-def testInit(app):
-    playMusic(app)
-
-    # newNote(app, 1, 120)
-    newNote(app, 2, 120)
-    newNote(app, 3, 150)
-
-    newNote(app, 4, 200)
-    newNote(app, 5, 250)
-    newNote(app, 6, 300)
-    
-
 
 def redrawAll(app):
     if app.gameStage == "home":
@@ -182,6 +238,9 @@ def redrawAll(app):
         drawGameScreen(app)
         drawPressedKeys(app)
         drawNotes(app)
+        if app.recording == False:
+            for button in app.buttonReturn:
+                drawButton(app, button)
 
     if app.gameStage == "play":
         drawGameScreen(app)
@@ -189,61 +248,95 @@ def redrawAll(app):
         drawNotes(app)
         drawUI(app)
 
+    if app.gameStage == "select":
+        drawSelectScreen(app)
+
+    if app.gameStage == "score":
+        drawScoreScreen(app)
 
 def onStep(app):
     if app.gameStage == "create":
+        app.currentDelTime = time.time() - app.startTime
+        if time.time() + .15 >= app.endTime and app.recording == True:
+            print("STOP!!!!")
+            app.writeFile.write("end")
+            stopMusic(app)
+
+            app.recording = False
+
+            print("stoped writing")
+            app.writeFile.close()
+            return
         if app.recording == True:
-            app.currentPercent += 100/(app.travelTimeSec * app.stepsPerSecond)
             for col in range(1, 9):
                 for note in app.colNotes[col]:
-                    note.move(-1*100/(app.travelTimeSec * app.stepsPerSecond))
-                    if note.percent > 100:
+                    if app.currentDelTime-note.time > app.travelTimeSec:
                         app.colNotes[col].pop(0)
 
     if app.gameStage == "play":
+        print(app.currentDelTime)
+        print(time.time(), "current")
+        print(app.endTime, "lim")
+        print(app.songLength, "length")
+        print(app.startTime, "started at")
+        app.currentDelTime = time.time() - app.startTime
+        if time.time() + .2 >= app.endTime:
+            stopMusic(app)
+            print("STOP!!!!")
+
+            app.playing = False
+            app.gameStage = "score"
+            if app.combo > app.maxCombo:
+                app.maxCombo = app.combo
+            return
         loadNotes(app)
-
-        
-
-        if app.combo >= 30:
-            app.multiplier = 4
-        elif app.combo >= 10:
-            app.multiplier = 2
-        else: app.multiplier = 1
-
         if app.playing == True:
-            app.currentPercent += 100/(app.travelTimeSec * app.stepsPerSecond)
+            
+            if app.combo >= 30:
+                app.multiplier = 4
+            elif app.combo >= 10:
+                app.multiplier = 2
+            else: app.multiplier = 1
 
-            for col in range(1, 9):
-                for note in app.colNotes[col]:
-                    note.move(100/(app.travelTimeSec * app.stepsPerSecond))
-                    # print(note)
-                    
-                    if note.percent < -30:
-                        if app.combo > app.maxCombo:
-                            app.maxCombo = app.combo
-                        app.combo = 0
-                        app.drawRating = "missed"
-                        app.notesLoaded -= 1
-                        app.colNotes[col].pop(0)
-    
-        if (app.endReached == True
-            and app.notesLoaded == 0
-            and app.musicPlaying == True):
-                stopMusic(app)
+            if app.playing == True:
+
+                for col in range(1, 9):
+                    for note in app.colNotes[col]:
+                        if note.time - app.currentDelTime <= 1:
+                            note.drawn = True
+                        # print(note)
+                        
+                        if note.time - app.currentDelTime < -.3:
+                            if app.combo > app.maxCombo:
+                                app.maxCombo = app.combo
+                            app.combo = 0
+                            app.drawRating = "missed"
+                            app.notesLoaded -= 1
+                            app.colNotes[col].pop(0)
+        
+            
     #print(app.keysPressed)
+
+
 
 def drawHomeScreen(app):
     drawRect(0,0,app.width, app.height, fill="gray")
     drawLabel("Welcome to my term project!", app.width/2, 3*app.height/8, fill="white", size=50)
-    drawLabel("Start", app.width/2, app.height/2 - 20, fill="white", size=30)
+    for button in app.buttonsHome:
+        drawButton(app, button)
+    drawLabel(f"Selected song: {app.song}", app.width/2, 7*app.height/8, fill="white", size = 40)
 
+def drawButton(app, button):
+    if button.selected:
+        drawRect(button.centerX - button.totalW/2, button.centerY - button.totalH/2, button.totalW, button.totalH, fill=button.colorSelected, border="black")
+    else: 
+        drawRect(button.centerX - button.totalW/2, button.centerY - button.totalH/2, button.totalW, button.totalH, fill=button.colorUnselected, border="black")
 
-    drawLabel("About", app.width/2, app.height/2 + 20, fill="white", size=25)
-    drawLabel("Settings", app.width/2, app.height/2 + 60, fill="white", size=25)
-
+    drawLabel(button.text, button.centerX, button.centerY, size = button.textSize, fill="white")
+    
 def drawGameScreen(app):
     drawImage('silly.png', 0, 0, width=app.width, height=app.height, visible=True, opacity=50)
+
 
     drawPolygon(app.boardSpecs.horizonInitX, 0,
                 app.width-app.boardSpecs.horizonInitX, 0,
@@ -264,13 +357,17 @@ def drawGameScreen(app):
         drawLine(i*app.boardSpecs.colWidth, app.boardSpecs.boardH, i*app.boardSpecs.colWidth, app.height)
         #drawLine(i*app.colWidth, 0, i*app.colWidth, app.height)
     
-
-    # drawLine(*perspectivize(app, 0, app.goodLim), *perspectivize(app, 8, app.goodLim), lineWidth=5, fill="red")
-    # drawLine(*perspectivize(app, 0, app.greatLim), *perspectivize(app, 8, app.greatLim), lineWidth=5, fill="yellow")
-    # drawLine(*perspectivize(app, 0, -1*app.goodLim), *perspectivize(app, 8, -1*app.goodLim), lineWidth=5, fill="red")
-    # drawLine(*perspectivize(app, 0, -1*app.greatLim), *perspectivize(app, 8, -1*app.greatLim), lineWidth=5, fill="yellow")
-
     drawLine(*perspectivize(app, 0, 0), *perspectivize(app, 8, 0), lineWidth=5, fill="green")
+
+    drawLabel("A", .5*app.boardSpecs.colWidth, app.height*12.5/13, size=30, bold=True, fill="red", opacity=100)
+    drawLabel("S", 1.5*app.boardSpecs.colWidth, app.height*12.5/13, size=30, bold=True, fill="red", opacity=100)
+    drawLabel("D", 2.5*app.boardSpecs.colWidth, app.height*12.5/13, size=30, bold=True, fill="red", opacity=100)
+    drawLabel("F", 3.5*app.boardSpecs.colWidth, app.height*12.5/13, size=30, bold=True, fill="red", opacity=100)
+    drawLabel("J", 4.5*app.boardSpecs.colWidth, app.height*12.5/13, size=30, bold=True, fill="red", opacity=100)
+    drawLabel("K", 5.5*app.boardSpecs.colWidth, app.height*12.5/13, size=30, bold=True, fill="red", opacity=100)
+    drawLabel("L", 6.5*app.boardSpecs.colWidth, app.height*12.5/13, size=30, bold=True, fill="red", opacity=100)
+    drawLabel(";", 7.5*app.boardSpecs.colWidth, app.height*12.5/13, size=30, bold=True, fill="red", opacity=100)
+
 
 def drawUI(app):
     drawLabel(f"SCORE: {app.score}", app.boardSpecs.cellWidth*16, 2*app.boardSpecs.cellHeight, size=20, bold=True)
@@ -292,9 +389,20 @@ def perspectivize(app, line, percent):
         -(100-percent)/100* ((app.boardSpecs.horizonInitX + line*app.boardSpecs.horizonColWidth -app.boardSpecs.colWidth*line)*10.25/11))
     return (x, y)
 
-def drawTesting(app):
-    pass
+def drawSelectScreen(app):
+    drawRect(0, 0, app.width, app.height, fill="lightBlue")
+    for button in app.buttonsSelect:
+        drawButton(app, button)
 
+
+def drawScoreScreen(app):
+    drawRect(0,0,app.width, app.height, fill="pink")
+    drawLabel("song complete!", app.width/2, 3*app.height/8, size=80)
+    drawLabel(f"score: {app.score}", app.width/2, 6*app.height/8, size=30)
+    drawLabel(f"max combo: {app.maxCombo}", app.width/2, 7*app.height/8, size=30)
+
+    for button in app.buttonReturn:
+        drawButton(app, button)
 
 
 
@@ -304,35 +412,34 @@ def drawNotes(app):
         for note in app.colNotes[col]:
             if note.drawn == True:
                 # print("doijfadfjaodsf")
-                coords = note.getCoords()
-                # print(coords)
+                #                 # print(coords)
                 # drawCircle(coords[0], coords[1], 5, fill="green")
                 # drawCircle(coords[2], coords[3], 5, fill="green")
                 # drawCircle(coords[4], coords[5], 5, fill="green")
                 # drawCircle(coords[6], coords[7], 5, fill="green")
 
-                drawPolygon(*note.getCoords(), fill=gradient('yellow', 'orange'), opacity=80)
+                drawPolygon(*note.getCoords(app.currentDelTime), fill=gradient('yellow', 'orange'), opacity=80)
                 # drawRect(app.boardSpecs.colWidth*(col-1), note.y-note.noteHeight/2, note.noteWidth, note.noteHeight, fill="green")
                 # drawLine(app.boardSpecs.colWidth*(col-1), note.y, app.boardSpecs.colWidth*col,note.y, fill="black", lineWidth = 5)
     pass
 
-def newNote(app, col, percent):
-    app.colNotes[col].append(Note(col, "tap", percent))
+def newNote(app, col, time, up=False):
+    app.colNotes[col].append(Note(col, "tap", time, up))
     pass
 
 def noteHit(app, col):
     note = app.colNotes[col][0]
-    if note.percent < 1 and note.percent > -1:
+    if note.time-app.currentDelTime <= .01 and note.time-app.currentDelTime >= -.01:
         app.combo += 1
         app.score += 200 * app.multiplier
 
         app.drawRating = "perfect"
-    elif note.percent < app.greatLim and note.percent > -1*app.greatLim:
+    elif note.time-app.currentDelTime < app.greatLim and note.time-app.currentDelTime > -1*app.greatLim:
         app.combo += 1
         app.score += 100 * app.multiplier
 
         app.drawRating = "great"
-    elif note.percent < app.goodLim and note.percent > -1*app.goodLim:
+    elif note.time-app.currentDelTime < app.goodLim and note.time-app.currentDelTime > -1*app.goodLim:
         app.combo += 1
         app.score += 50 * app.multiplier
         app.drawRating = "good"
@@ -347,43 +454,75 @@ def noteHit(app, col):
     #add points
 
 
-
 #input
 def onMouseMove(app, mouseX, mouseY):
-    pass
+    if app.gameStage == "home":
+        for button in app.buttonsHome:
+            button.isOnButton(mouseX, mouseY)
+    
+    if app.gameStage == "select":
+        for button in app.buttonsSelect:
+            button.isOnButton(mouseX, mouseY)
+    
+    if app.gameStage == "create" or app.gameStage == "score":
+        for button in app.buttonReturn:
+            button.isOnButton(mouseX, mouseY)
+
+def onMousePress(app, mouseX, mouseY):
+    if app.gameStage == "home":
+        for button in app.buttonsHome:
+            if button.selected:
+                app.buttonsHome[button](app)
+    
+    if app.gameStage == "select":
+        for button in app.buttonsSelect:
+            if button.selected:
+                if type(app.buttonsSelect[button]) is int:
+                    changeSongTo(app, app.buttonsSelect[button])
+                    button.selected = False
+                    returnHome(app)
+                else:
+                    button.selected = False
+                    returnHome(app)
+
+    if app.gameStage == "score" or (app.gameStage == "create" and app.recording == False):
+        for button in app.buttonReturn:
+            if button.selected:
+                button.selected = False
+                returnHome(app)
 
 def makeNote(app, col):
-    newNote(app, col, 0)
-    app.writeFile.write(f"{col} {app.currentPercent}\n")
+    newNote(app, col, app.currentDelTime, True)
+    print(f"new note: {col} {app.currentDelTime}")
+    app.writeFile.write(f"{col} {app.currentDelTime}\n")
 
 def onKeyPress(app, key):
+    if app.gameStage == "create" or app.gameStage == "play":
+        if "y" in key:
+            print("fdoijfaoids")
+            stopMusic(app)
+
     if app.gameStage == "create":
-        if "a" in key:
-            makeNote(app, 1)
-        if "s" in key:
-            makeNote(app, 2)
-        if "d" in key:
-            makeNote(app, 3)
-        if "f" in key:
-            makeNote(app, 4)
-        if "j" in key:
-            makeNote(app, 5)
-        if "k" in key:
-            makeNote(app, 6)
-        if "l" in key:
-            makeNote(app, 7)
-        if ";" in key:
-            makeNote(app, 8)
-        if "b" in key:
-            if app.recording == True:
-                app.recording = False
-                app.writeFile.write("end")
-                print("stoped writing")
-                app.writeFile.close()
-                stopMusic(app)
-            else:
-                app.recording = True
-                playMusic(app)
+        
+
+
+        if app.recording == True:
+            if "a" in key:
+                makeNote(app, 1)
+            if "s" in key:
+                makeNote(app, 2)
+            if "d" in key:
+                makeNote(app, 3)
+            if "f" in key:
+                makeNote(app, 4)
+            if "j" in key:
+                makeNote(app, 5)
+            if "k" in key:
+                makeNote(app, 6)
+            if "l" in key:
+                makeNote(app, 7)
+            if ";" in key:
+                makeNote(app, 8)
 
     #pressing keys
     if app.gameStage == "play":
@@ -403,15 +542,6 @@ def onKeyPress(app, key):
             processTap(app, 7)
         if ";" in key:
             processTap(app, 8)
-        
-        if "b" in key:
-            if app.playing == True:
-                app.playing = False
-                print("paused")
-                stopMusic(app)
-            else:
-                app.playing = True
-                playMusic(app)
 
 def processTap(app, col):
     app.keysPressed[col] = True
@@ -436,23 +566,6 @@ def onKeyRelease(app, key):
             app.keysPressed[7] = False
         if ";" in key:
             app.keysPressed[8] = False
-
-        if "q" in key:
-            newNote(app, 1, 100)
-        if "w" in key:
-            newNote(app, 2, 100)
-        if "e" in key:
-            newNote(app, 3, 100)
-        if "r" in key:
-            newNote(app, 4, 100)
-        if "u" in key:
-            newNote(app, 5, 100)
-        if "i" in key:
-            newNote(app, 6, 100)
-        if "o" in key:
-            newNote(app, 7, 100)
-        if "p" in key:
-            newNote(app, 8, 100)
 
 def drawPressedKeys(app):
     for col in range(1, 9):
