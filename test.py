@@ -335,7 +335,7 @@ def drawButton(app, button):
     drawLabel(button.text, button.centerX, button.centerY, size = button.textSize, fill="white")
     
 def drawGameScreen(app):
-    drawImage('silly.png', 0, 0, width=app.width, height=app.height, visible=True, opacity=50)
+    drawImage('background.png', 0, 0, width=app.width, height=app.height, visible=True, opacity=50)
 
 
     drawPolygon(app.boardSpecs.horizonInitX, 0,

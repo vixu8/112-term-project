@@ -8,19 +8,6 @@ import soundfile
 import time
 from button import Button
 
-
-'''
-ACTION ITEMS:
-instead of it all as a list, try going with that prev idea of splitting it by line, 
-    with each line having percents from 0 to 100
-so that u can load a line at a time/1 whole section at a time instead of indiv.
-also figure out how to read that.
-
-
-
-'''
-
-
 def onAppStart(app):
     app.song = "accumula_town"
 
@@ -116,11 +103,8 @@ def selectSong(app, song):
     #create fade out audio thing
     try:
         wave_obj = sa.WaveObject.from_wave_file(song+"-fade.wav")
-        print("fade audoi found")
-
         y, sr = librosa.load(song+"-fade.wav")
     except:
-        print("making fade audio file")
 
         y, sr = librosa.load(song+".wav")
 
@@ -156,7 +140,6 @@ def clearNotes(app):
 def startPlay(app):
     clearNotes(app)
     selectSong(app, app.song)
-    print("play mode")
     if loadMapFile(app, app.song) == False:
         return
     
@@ -191,7 +174,6 @@ def loadMapFile(app, song):
         return True
     except:
         return False
-        print("no map foud :(")
 
 #=================create functions==================
 def startCreate(app):
@@ -203,8 +185,6 @@ def startCreate(app):
     app.startTime = time.time()
     app.endTime = app.startTime + app.songLength
 
-    print("create mode")
-
 def prepareCreate(app, song):
     app.writeFile = open(song+"-map.txt", "w")
 
@@ -212,7 +192,6 @@ def prepareCreate(app, song):
 #=================select functions==================
 def startSelect(app):
     app.gameStage = "select"
-    print("select mode)")
 
 def changeSongTo(app, index):
     app.song = app.songList[index]
@@ -271,13 +250,11 @@ def onStep(app):
     if app.gameStage == "create":
         app.currentDelTime = time.time() - app.startTime
         if time.time() + .15 >= app.endTime and app.recording == True:
-            print("STOP!!!!")
             app.writeFile.write("end")
             stopMusic(app)
 
             app.recording = False
 
-            print("stoped writing")
             app.writeFile.close()
             return
         if app.recording == True:
@@ -290,7 +267,6 @@ def onStep(app):
         app.currentDelTime = time.time() - app.startTime
         if time.time() + .2 >= app.endTime:
             stopMusic(app)
-            print("STOP!!!!")
 
             app.accuracy = (int((app.great+app.good+app.perfect)/(app.misses+app.great+app.good+app.perfect)*10000))/100
 
@@ -314,7 +290,6 @@ def onStep(app):
                     for note in app.colNotes[col]:
                         if note.time - app.currentDelTime <= 1:
                             note.drawn = True
-                        # print(note)
                         
                         if note.time - app.currentDelTime < -.3:
                             if app.combo > app.maxCombo:
@@ -324,10 +299,6 @@ def onStep(app):
                             app.misses += 1
                             app.notesLoaded -= 1
                             app.colNotes[col].pop(0)
-        
-            
-    #print(app.keysPressed)
-
 
 
 def drawHomeScreen(app):
@@ -346,7 +317,8 @@ def drawButton(app, button):
     drawLabel(button.text, button.centerX, button.centerY, size = button.textSize, fill="white")
     
 def drawGameScreen(app):
-    drawImage('silly.png', 0, 0, width=app.width, height=app.height, visible=True, opacity=50)
+    drawRect(0,0,app.width, app.height, fill=gradient('black', 'lightGray', start='top'))
+    drawImage('background.png', 0, 0, width=app.width, height=app.height, visible=True, opacity=50)
 
 
     drawPolygon(app.boardSpecs.horizonInitX, 0,
@@ -381,8 +353,8 @@ def drawGameScreen(app):
 
 
 def drawUI(app):
-    drawLabel(f"SCORE: {app.score}", app.boardSpecs.cellWidth*16, 2*app.boardSpecs.cellHeight, size=20, bold=True)
-    drawLabel(f"COMBO: {app.combo}", app.boardSpecs.cellWidth*16, app.boardSpecs.cellHeight, size=30, bold=True)
+    drawLabel(f"SCORE: {app.score}", app.boardSpecs.cellWidth*16, 2*app.boardSpecs.cellHeight, size=20, bold=True, fill="white")
+    drawLabel(f"COMBO: {app.combo}", app.boardSpecs.cellWidth*16, app.boardSpecs.cellHeight, size=30, bold=True, fill="white")
 
     if app.drawRating == "perfect":
         drawLabel("PERFECT!", app.boardSpecs.cellWidth*10, 2*app.boardSpecs.cellHeight, size=40, fill=rgb(20,247,249))
@@ -615,7 +587,6 @@ def drawPressedKeys(app):
              opacity=75)
 
 def main():
-    print("blehh")
     runApp()
 
 main()
